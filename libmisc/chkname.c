@@ -31,7 +31,7 @@ good_name(const char *name)
 
 	while (*name) {
 		if (*name == ':' || *name == ',' ||
-		    *name == '\n' || !isprint(*name))
+		    *name == '\n' || !isprint(*name) || !isascii(*name))
 			return 0;
 
 		name++;
