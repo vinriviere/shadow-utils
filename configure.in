@@ -113,6 +113,7 @@ dnl AC_CHECK_FUNCS(strptime)
 AC_CHECK_FUNCS(a64l fchmod fchown fsync getgroups gethostname getspnam)
 AC_CHECK_FUNCS(gettimeofday getusershell getutent initgroups lchown lckpwdf)
 AC_CHECK_FUNCS(lstat memcpy memset setgroups sigaction strchr updwtmp updwtmpx)
+AC_CHECK_FUNCS(innetgr)
 
 AC_REPLACE_FUNCS(mkdir putgrent putpwent putspent rename rmdir)
 AC_REPLACE_FUNCS(sgetgrent sgetpwent sgetspent)
