@@ -519,9 +519,18 @@ line is not found in the file, then the TERM environment parameter will not
 be set.
 .\"
 .IP "UID_MAX (number)"
-XXX needs to be documented.
 .IP "UID_MIN (number)"
-XXX needs to be documented.
+Range of UIDs to choose from for the
+.B useradd
+program.
+.\"
+.IP "UID_SYSTEM_MIN (number)"
+Lowest possible UID to choose from for the
+.B useradd
+program for
+.I system
+users. This is to avoid creating users below a certain
+UID for systems which have a range of statically assigned UIDs.
 .\"
 .IP "ULIMIT (long number)"
 The file size limit is initialized to this value.  This is supported

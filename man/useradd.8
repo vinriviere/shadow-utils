@@ -141,7 +141,7 @@ will be created by default. This option will turn off this Red Hat
 Linux specific behavior. 
 .IP \fB-r\fR 
 This flag is used to create a system account. That is, an user with an 
-UID lower than value of UID_MIN defined in \fI/etc/login.defs\fR. Note 
+UID lower than 500 and higher than UID_SYSTEM_MIN, as defined in \fI/etc/login.defs\fR. Note 
 that \fBuseradd\fR will not create a home directory for such an user, 
 regardless of the default setting in \fI/etc/login.defs\fR. 
 You have to specify \fB-m\fR option if you want a home directory  

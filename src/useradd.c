@@ -951,7 +951,7 @@ find_new_uid(void)
 	    uid_min = getdef_num("UID_MIN", 500);
 	    uid_max = getdef_num("UID_MAX", 60000);
 	} else {
-	    uid_min = 1;
+	    uid_min = getdef_num("UID_SYSTEM_MIN", 100);
 	    uid_max = 499;
 	}
 

@@ -118,6 +118,7 @@ static struct itemdef def_table[] = {
 	{ "TTYTYPE_FILE",		NULL },
 	{ "UID_MAX",			NULL },
 	{ "UID_MIN",			NULL },
+	{ "UID_SYSTEM_MIN",		NULL },
 	{ "ULIMIT",			NULL },
 	{ "UMASK",			NULL },
 	{ "USERDEL_CMD",		NULL },
