@@ -1696,6 +1696,7 @@ main(int argc, char **argv)
 			user_id, user_newid,
 			user_gid, gflg ? user_newgid:user_gid);
 	}
+        hup_nscd();
 
 	if (grp_err)
 		exit(E_GRP_UPDATE);

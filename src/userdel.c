@@ -944,6 +944,7 @@ main(int argc, char **argv)
 	user_cancel(user_name);
 
 	close_files ();
+        hup_nscd ();
 
 	exit(errors ? E_HOMEDIR : E_SUCCESS);
 	/*NOTREACHED*/

@@ -1964,6 +1964,8 @@ main(int argc, char **argv)
 
 	close_files ();
 
+	hup_nscd ();
+
 	exit(E_SUCCESS);
 	/*NOTREACHED*/
 }

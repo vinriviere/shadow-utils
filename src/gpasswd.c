@@ -656,6 +656,7 @@ output:
 	endsgent ();
 #endif
 #endif
+        hup_nscd ();
 	exit (0);
 	/*NOTREACHED*/
 }

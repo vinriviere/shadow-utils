@@ -562,6 +562,7 @@ main(int argc, char **argv)
 		spw_unlock();
 #endif
 	(void) pw_unlock ();
+        hup_nscd ();
 
 	exit (0);
 	/*NOTREACHED*/

@@ -547,6 +547,7 @@ main(int argc, char **argv)
 	grp_update();
 
 	close_files();
+        hup_nscd();
 	exit(E_SUCCESS);
 	/*NOTREACHED*/
 }
