@@ -214,7 +214,12 @@ netgroup_match(const char *group, const char *machine, const char *user)
 		mydomain = domain;
 	}
 
+# ifdef HAVE_INNETGR
 	return innetgr(group, machine, user, mydomain);
+# else
+	syslog (LOG_ERR, "NIS netgroup support not configured");
+	return (NO);
+# endif
 #endif
 }
 

@@ -142,6 +142,9 @@ do_rlogin(const char *remote_host, char *name, int namelen, char *term, int term
 
 	GTTY(0, &termio);
 	termio.c_iflag |= ICRNL|IXON;
+#ifndef ONLCR
+# define ONLCR 0
+#endif
 	termio.c_oflag |= OPOST|ONLCR;
 	termio.c_lflag |= ICANON|ECHO|ECHOE;
 #ifdef CBAUD
