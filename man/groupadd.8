@@ -32,7 +32,7 @@
 groupadd \- Create a new group
 .SH SYNOPSIS
 .B groupadd
-[\fB-g\fI gid \fR[\fB-o\fR]]
+[\fB-g\fI gid \fR[\fB-o\fR]] [\fB-r\fR] [\fB-f\fR]
 .I group
 .SH DESCRIPTION
 The \fBgroupadd\fR command
@@ -44,9 +44,29 @@ The options which apply to the \fBgroupadd\fR command are
 The numerical value of the group's ID.
 This value must be unique, unless the \fB-o\fR option is used.
 The value must be non-negative.
-The default is to use the smallest ID value greater than 99 and
+The default is to use the smallest ID value greater than 500 and
 greater than every other group.
-Values between 0 and 99 are typically reserved for system accounts.
+Values between 0 and 499 are typically reserved for \fIsystem accounts\fR.
+.IP \fB-r\fR
+This flag instructs \fBgroupadd\fR to add a \fIsystem
+account\fR. First available \fIgid\fR lower than 499 will be
+automatically selected unless \fB-g\fR option is given also on the
+command line.
+.br
+This is an option added by Red Hat Software.
+.IP \fB-f\fR
+This is \fIforce\fR flag. This will stop \fBgroupadd\fR exit with
+error when the group about to be added already exists on the
+system. If that is the case, the group won't be altered (or added
+again, for that matter).
+.br
+This option also modifies the way \fB-g\fR option works. When you
+request a \fIgid\fR that it is not unique and you don't give \fB-o\fR
+option too, the group creation will fall back to the standard behavior
+(adding a group as neither \fB-g\fR or \fB-o\fR options were
+specified).
+.br
+This is an option added by Red Hat Software.
 .SH FILES
 /etc/group \- group account information
 .br

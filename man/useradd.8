@@ -51,7 +51,7 @@ useradd \- Create a new user or update default new user information
 .IR group [,...]]
 .br
 .RB [ -m " [" -k
-.IR skeleton_dir ]]
+.IR skeleton_dir ] " |" " " -M ]
 .RB [ -p
 .IR passwd ]
 .br
@@ -60,6 +60,8 @@ useradd \- Create a new user or update default new user information
 .RB [ -u
 .IR uid " ["
 .BR -o ]]
+.RB [ -n ] 
+.RB [ -r ] 
 .I login
 .TP 8
 .B useradd
@@ -79,6 +81,8 @@ command line and the default values from the system.
 The new user account will be entered into the system files as needed,
 the home directory will be created, and initial files copied, depending
 on the command line options.
+The version provided with Red Hat Linux will create a group for each 
+user added to the system, unless \fB-n\fR option is given.
 The options which apply to the \fBuseradd\fR command are
 .\" .IP "\fB-A {\fImethod\fR|\fBDEFAULT\fR},..."
 .\" The value of the user's authentication method.
@@ -128,8 +132,24 @@ The \fB-k\fR option is only valid in conjunction with the \fB-m\fR
 option.
 The default is to not create the directory and to not copy any
 files.
+.IP \fB-M\fR 
+The user home directory will not be created, even if the system  
+wide settings from \fI/etc/login.defs\fR is to create home dirs. 
+.IP \fB-n\fR 
+A group having the same name as the user being added to the system 
+will be created by default. This option will turn off this Red Hat 
+Linux specific behavior. 
+.IP \fB-r\fR 
+This flag is used to create a system account. That is, an user with an 
+UID lower than value of UID_MIN defined in \fI/etc/login.defs\fR. Note 
+that \fBuseradd\fR will not create a home directory for such an user, 
+regardless of the default setting in \fI/etc/login.defs\fR. 
+You have to specify \fB-m\fR option if you want a home directory  
+for a system account to be created. 
+This is an option added by Red Hat. 
 .IP "\fB-p \fIpasswd\fR"
-The encrypted password, as returned by \fBcrypt\fR(3).
+The encrypted password, as returned by \fBcrypt\fR(3) or an MD5 password
+generator.
 The default is to disable the account.
 .IP "\fB-s \fIshell\fR"
 The name of the user's login shell.
@@ -170,19 +190,24 @@ default values.
 .SH NOTES
 The system administrator is responsible for placing the default
 user files in the \fI/etc/skel\fR directory.
+.br
+This version of useradd was modified by Red Hat to suit Red Hat 
+user/group convention.
 .SH CAVEATS
 You may not add a user to an NIS group.
 This must be performed on the NIS server.
 .SH FILES
-/etc/passwd \- user account information
+\fB/etc/passwd\fR \- user account information
 .br
-/etc/shadow \- secure user account information
+\fB/etc/shadow\fR \- secure user account information
 .br
-/etc/group \- group information
+\fB/etc/group\fR \- group information
 .br
-/etc/default/useradd \- default information
+\fB/etc/default/useradd\fR \- default information
 .br
-/etc/skel \- directory containing default files
+\fB/etc/login.defs\fR \- system-wide settings
+.br
+\fB/etc/skel\fR \- directory containing default files
 .SH SEE ALSO
 .BR chfn (1),
 .BR chsh (1),

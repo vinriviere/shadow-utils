@@ -72,6 +72,10 @@ static char	*Prog;
 static int oflg = 0; /* permit non-unique group ID to be specified with -g */
 static int gflg = 0; /* ID value for the new group */
 static int fflg = 0; /* if group already exists, do nothing and exit(0) */
+static int rflg = 0; /* for adding system accounts (RedHat) */
+
+/* For adding "system" accounts */
+#define MIN_GID		10
 
 #ifdef	NDBM
 extern	int	gr_dbm_mode;
@@ -102,7 +106,7 @@ static void fail_exit(int);
 static void
 usage(void)
 {
-	fprintf(stderr, _("usage: groupadd [-g gid [-o]] group\n"));
+	fprintf(stderr, _("usage: groupadd [-g gid [-o]]  [-r] [-f] group\n"));
 	exit(E_USAGE);
 }
 
@@ -227,8 +231,13 @@ find_new_gid(void)
 	const struct group *grp;
 	gid_t gid_min, gid_max;
 
-	gid_min = getdef_num("GID_MIN", 100);
-	gid_max = getdef_num("GID_MAX", 60000);
+	if (!rflg) {
+	    gid_min = getdef_num("GID_MIN", 500);
+	    gid_max = getdef_num("GID_MAX", 60000);
+	} else {
+	    gid_min = MIN_GID;
+	    gid_max = getdef_num("GID_MIN", 499);
+	}
 
 	/*
 	 * Start with some GID value if the user didn't provide us with
@@ -338,7 +347,7 @@ process_flags(int argc, char **argv)
 	char *cp;
 	int arg;
 
-	while ((arg = getopt(argc, argv, "og:O:f")) != EOF) {
+	while ((arg = getopt(argc, argv, "og:O:fr")) != EOF) {
 		switch (arg) {
 		case 'g':
 			gflg++;
@@ -383,7 +392,13 @@ process_flags(int argc, char **argv)
 			 */
 			fflg++;
 			break;
-		default:
+		    case 'r':
+			/*
+			 * create a system group
+			 */
+			rflg++;
+			break;
+		    default:
 			usage();
 		}
 	}

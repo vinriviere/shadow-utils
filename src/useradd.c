@@ -61,7 +61,7 @@ RCSID(PKG_VER "$Id: useradd.c,v 1.18 2000/09/02 18:40:44 marekm Exp $")
 #define USER_DEFAULTS_FILE "/etc/default/useradd"
 #define NEW_USER_FILE "/etc/default/nuaddXXXXXX"
 #endif
-
+     
 /*
  * Needed for MkLinux DR1/2/2.1 - J.
  */
@@ -75,7 +75,7 @@ RCSID(PKG_VER "$Id: useradd.c,v 1.18 2000/09/02 18:40:44 marekm Exp $")
 static gid_t def_group = 100;
 static const char *def_gname = "other";
 static const char *def_home = "/home";
-static const char *def_shell = "";
+static const char *def_shell = "/dev/null";
 static const char *def_template = SKEL_DIR;
 #ifdef SHADOWPWD
 static long def_inactive = -1;
@@ -87,7 +87,7 @@ static char	def_file[] = USER_DEFAULTS_FILE;
 #define	VALID(s)	(strcspn (s, ":\n") == strlen (s))
 
 static const char *user_name = "";
-static const char *user_pass = "!";
+static const char *user_pass = "!!";
 static uid_t user_id;
 static gid_t user_gid;
 static const char *user_comment = "";
@@ -115,10 +115,13 @@ static int
 	sflg = 0, /* shell program for new account */
 	cflg = 0, /* comment (GECOS) field for new account */
 	mflg = 0, /* create user's home directory if it doesn't exist */
-	kflg = 0, /* specify a directory to fill new user directory */
+        Mflg = 0, /* do NOT create user's home directory no matter what */
+        kflg = 0, /* specify a directory to fill new user directory */
 	fflg = 0, /* days until account with expired password is locked */
 	eflg = 0, /* days since 1970-01-01 when account is locked */
-	Dflg = 0; /* set/show new user default values */
+	Dflg = 0, /* set/show new user default values */
+        nflg = 0, /* do not add a group for this user */
+        rflg = 0; /* create a system account */
 
 #ifdef AUTH_METHODS
 static int Aflg = 0; /* specify authentication method for user */
@@ -181,19 +184,19 @@ static int	sg_dbm_added;
 #define E_HOMEDIR	12	/* can't create home directory */
 
 #ifdef SVR4
-#define DGROUP	"defgroup="
-#define HOME	"defparent="
-#define SHELL	"defshell="
-#define INACT	"definact="
-#define EXPIRE	"defexpire="
-#define SKEL	"defskel="
+#define DGROUP  "defgroup="
+#define HOME    "defparent="
+#define SHELL   "defshell="
+#define INACT   "definact="
+#define EXPIRE  "defexpire="
+#define SKEL    "defskel="
 #else
-#define DGROUP	"GROUP="
-#define HOME	"HOME="
-#define SHELL	"SHELL="
-#define INACT	"INACTIVE="
-#define EXPIRE	"EXPIRE="
-#define SKEL	"SKEL="
+#define DGROUP  "GROUP="
+#define HOME    "HOME="
+#define SHELL   "SHELL="
+#define INACT   "INACTIVE="
+#define EXPIRE  "EXPIRE="
+#define SKEL    "SKEL="
 #endif
 
 /* local function prototypes */
@@ -710,7 +713,7 @@ usage(void)
 #ifdef AUTH_METHODS
 	fprintf(stderr, _("[-A program] "));
 #endif
-	fprintf(stderr, _("[-p passwd] name\n"));
+	fprintf(stderr, _("[-p passwd] [-n] [-r] name\n"));
 
 	fprintf(stderr, _("       %s\t-D [-g group] [-b base] [-s shell]\n"),
 		Prog);
@@ -806,31 +809,7 @@ grp_update(void)
 	struct sgrp *nsgrp;
 #endif
 
-	/*
-	 * Lock and open the group file.  This will load all of the group
-	 * entries.
-	 */
-
-	if (! gr_lock ()) {
-		fprintf(stderr, _("%s: error locking group file\n"), Prog);
-		fail_exit(E_GRP_UPDATE);
-	}
-	if (! gr_open (O_RDWR)) {
-		fprintf(stderr, _("%s: error opening group file\n"), Prog);
-		fail_exit(E_GRP_UPDATE);
-	}
-#ifdef	SHADOWGRP
-	if (is_shadow_grp && ! sgr_lock ()) {
-		fprintf(stderr, _("%s: error locking shadow group file\n"),
-			Prog);
-		fail_exit(E_GRP_UPDATE);
-	}
-	if (is_shadow_grp && ! sgr_open (O_RDWR)) {
-		fprintf(stderr, _("%s: error opening shadow group file\n"),
-			Prog);
-		fail_exit(E_GRP_UPDATE);
-	}
-#endif
+	/* Locking and opening of the group files moved to open_files() --gafton */
 
 	/*
 	 * Scan through the entire group file looking for the groups that
@@ -968,8 +947,13 @@ find_new_uid(void)
 	const struct passwd *pwd;
 	uid_t uid_min, uid_max;
 
-	uid_min = getdef_num("UID_MIN", 100);
-	uid_max = getdef_num("UID_MAX", 60000);
+	if (!rflg) {
+	    uid_min = getdef_num("UID_MIN", 500);
+	    uid_max = getdef_num("UID_MAX", 60000);
+	} else {
+	    uid_min = 1;
+	    uid_max = 499;
+	}
 
 	/*
 	 * Start with some UID value if the user didn't provide us with
@@ -1031,6 +1015,88 @@ find_new_uid(void)
 			fprintf(stderr, _("%s: can't get unique uid\n"),
 				Prog);
 			fail_exit(E_UID_IN_USE);
+		}
+	}
+}
+
+/*
+ * find_new_gid - find the next available GID
+ *
+ *	find_new_gid() locates the next highest unused GID in the group
+ *	file, or checks the given group ID against the existing ones for
+ *	uniqueness.
+ */
+
+static void
+find_new_gid()
+{
+	const struct group *grp;
+	gid_t gid_min, gid_max;
+
+	if (!rflg) {
+	    gid_min = getdef_num("GID_MIN", 500);
+	    gid_max = getdef_num("GID_MAX", 60000);
+	} else {
+	    gid_min = 1;
+	    gid_max = 499;
+	}
+
+	/*
+	 * Start with some GID value if the user didn't provide us with
+	 * one already.
+	 */
+
+	user_gid = gid_min;
+
+	/*
+	 * Search the entire group file, either looking for this
+	 * GID (if the user specified one with -g) or looking for the
+	 * largest unused value.
+	 */
+
+#ifdef NO_GETGRENT
+	gr_rewind();
+	while ((grp = gr_next()))
+#else
+	setgrent();
+	while ((grp = getgrent()))
+#endif
+	    {
+		if (strcmp(user_name, grp->gr_name) == 0) {
+		    user_gid = grp->gr_gid;
+		    return;
+		}
+		if (grp->gr_gid >= user_gid) {
+		    if (grp->gr_gid > gid_max)
+			continue;
+		    user_gid = grp->gr_gid + 1;
+		}
+	}
+#ifndef NO_GETGRENT /* RH Linux does have this, so ... */
+	/* A quick test gets here: if the UID is available
+	 * as a GID, go ahead and use it */
+	if (!getgrgid(user_id)) {
+	    user_gid = user_id;
+	    return;
+	}
+#endif
+	if (user_gid == gid_max + 1) {
+		for (user_gid = gid_min; user_gid < gid_max; user_gid++) {
+#ifdef NO_GETGRENT
+			gr_rewind();
+			while ((grp = gr_next()) && grp->gr_gid != user_gid)
+				;
+			if (!grp)
+				break;
+#else
+			if (!getgrgid(user_gid))
+				break;
+#endif
+		}
+		if (user_gid == gid_max) {
+			fprintf(stderr, "%s: can't get unique gid (run out of GIDs)\n",
+				Prog);
+			fail_exit(4);
 		}
 	}
 }
@@ -1125,9 +1191,9 @@ process_flags(int argc, char **argv)
 	char *cp;
 
 #ifdef SHADOWPWD
-#define FLAGS "A:Du:og:G:d:s:c:mk:p:f:e:b:O:M"
+#define FLAGS "A:Du:og:G:d:s:c:mk:p:f:e:b:O:Mnr"
 #else
-#define FLAGS "A:Du:og:G:d:s:c:mk:p:b:O:M"
+#define FLAGS "A:Du:og:G:d:s:c:mk:p:b:O:Mnr"
 #endif
 	while ((arg = getopt(argc, argv, FLAGS)) != EOF) {
 #undef FLAGS
@@ -1251,12 +1317,6 @@ process_flags(int argc, char **argv)
 		case 'm':
 			mflg++;
 			break;
-		case 'M':
-			/*
-			 * don't create home dir - this is the default,
-			 * ignored for RedHat/PLD adduser compatibility.
-			 */
-			break;
 		case 'o':
 			oflg++;
 			break;
@@ -1301,6 +1361,15 @@ process_flags(int argc, char **argv)
 			user_id = get_number(optarg);
 			uflg++;
 			break;
+		case 'n':
+		    nflg++;
+		    break;
+		case 'r':
+		    rflg++;
+		    break;
+		case 'M':
+		    Mflg++;
+		    break;
 		default:
 			usage();
 		}
@@ -1311,9 +1380,12 @@ process_flags(int argc, char **argv)
 	 * Certain options are only valid in combination with others.
 	 * Check it here so that they can be specified in any order.
 	 */
-	if ((oflg && !uflg) || (kflg && !mflg))
+	if (kflg && !mflg)
 		usage();
 
+	if (mflg && Mflg) /* the admin is not decided .. create or not ? */
+	    usage();
+	
 	/*
 	 * Either -D or username is required.  Defaults can be set with -D
 	 * for the -b, -e, -f, -g, -s options only.
@@ -1434,6 +1506,31 @@ open_files(void)
 		exit(E_PW_UPDATE);
 	}
 #endif
+	/*
+	 * Lock and open the group file.  This will load all of the group
+	 * entries.
+	 */
+
+	if (! gr_lock ()) {
+		fprintf(stderr, _("%s: error locking group file\n"), Prog);
+		fail_exit(E_GRP_UPDATE);
+	}
+	if (! gr_open (O_RDWR)) {
+		fprintf(stderr, _("%s: error opening group file\n"), Prog);
+		fail_exit(E_GRP_UPDATE);
+	}
+#ifdef	SHADOWGRP
+	if (is_shadow_grp && ! sgr_lock ()) {
+		fprintf(stderr, _("%s: error locking shadow group file\n"),
+			Prog);
+		fail_exit(E_GRP_UPDATE);
+	}
+	if (is_shadow_grp && ! sgr_open (O_RDWR)) {
+		fprintf(stderr, _("%s: error opening shadow group file\n"),
+			Prog);
+		fail_exit(E_GRP_UPDATE);
+	}
+#endif        /* SHADOWGRP*/
 }
 
 
@@ -1481,9 +1578,6 @@ usr_update(void)
 #ifdef	SHADOWPWD
 	struct	spwd	spent;
 #endif
-
-	if (! oflg)
-		find_new_uid ();
 
 #ifdef AUTH_METHODS
 	if (Aflg) {
@@ -1642,6 +1736,118 @@ create_home(void)
 	}
 }
 
+/* a fake something */
+static char *empty_list = NULL;
+
+/*
+ * new_grent - initialize the values in a group file entry
+ *
+ *	new_grent() takes all of the values that have been entered and
+ *	fills in a (struct group) with them.
+ */
+
+static void
+new_grent(grent)
+	struct group *grent;
+{
+	bzero ((char *) grent, sizeof *grent);
+	(const char *) (grent->gr_name) = user_name;
+	grent->gr_passwd = "x";
+	grent->gr_gid = user_gid;
+	grent->gr_mem = &empty_list;
+}
+
+#ifdef	SHADOWGRP
+/*
+ * new_sgent - initialize the values in a shadow group file entry
+ *
+ *	new_sgent() takes all of the values that have been entered and
+ *	fills in a (struct sgrp) with them.
+ */
+
+static void
+new_sgent(sgent)
+	struct sgrp *sgent;
+{
+	bzero ((char *) sgent, sizeof *sgent);
+	(const char *)(sgent->sg_name) = user_name;
+	sgent->sg_passwd = "!";
+	sgent->sg_adm = &empty_list;
+	sgent->sg_mem = &empty_list;
+}
+#endif	/* SHADOWGRP */
+
+/*
+ * grp_update - add new group file entries
+ *
+ *	grp_update() writes the new records to the group files.
+ */
+
+static void grp_add()
+{
+	struct	group	grp;
+#ifdef	SHADOWGRP
+	struct	sgrp	sgrp;
+#endif	/* SHADOWGRP */
+
+	/*
+	 * Create the initial entries for this new group.
+	 */
+
+	new_grent (&grp);
+#ifdef	SHADOWGRP
+	new_sgent (&sgrp);
+#endif	/* SHADOWGRP */
+
+	/*
+	 * Write out the new group file entry.
+	 */
+	if (! gr_update (&grp)) {
+		fprintf (stderr, "%s: error adding new group entry\n", Prog);
+		fail_exit (10);
+	}
+#ifdef	NDBM
+
+	/*
+	 * Update the DBM group file with the new entry as well.
+	 */
+
+	if (gr_dbm_present() && ! gr_dbm_update (&grp)) {
+		fprintf (stderr, "%s: cannot add new dbm group entry\n", Prog);
+		fail_exit (10);
+	}
+	endgrent ();
+#endif	/* NDBM */
+
+#ifdef	SHADOWGRP
+
+	/*
+	 * Write out the new shadow group entries as well.
+	 */
+
+	if (is_shadow_grp && ! sgr_update (&sgrp)) {
+		fprintf (stderr, "%s: error adding new group entry\n", Prog);
+		fail_exit (10);
+	}
+#ifdef	NDBM
+
+	/*
+	 * Update the DBM group file with the new entry as well.
+	 */
+
+	if (is_shadow_grp && sg_dbm_present() && ! sg_dbm_update (&sgrp)) {
+		fprintf (stderr, "%s: cannot add new dbm group entry\n", Prog);
+		fail_exit (10);
+	}
+	endsgent ();
+#endif	/* NDBM */
+#endif	/* SHADOWGRP */
+	SYSLOG((LOG_INFO, "new group: name=%s, gid=%d\n",
+		user_name, user_gid));
+	/* we need to remeber we have to close the group file... */
+	do_grp_update++;
+}
+
 /*
  * main - useradd command
  */
@@ -1687,6 +1893,14 @@ main(int argc, char **argv)
 
 	process_flags(argc, argv);
 
+	if (!rflg) /* for system accounts defaults are ignored and we
+		    * do not create a home dir -- gafton */
+	    if (getdef_bool("CREATE_HOME"))
+		mflg = 1;
+
+	if (Mflg) /* absolutely sure that we do not create home dirs */
+	    mflg = 0;
+	
 	/*
 	 * See if we are messing with the defaults file, or creating
 	 * a new user.
@@ -1705,8 +1919,12 @@ main(int argc, char **argv)
 	 */
 
 	if (getpwnam(user_name)) {
+	    if (!oflg) {
 		fprintf(stderr, _("%s: user %s exists\n"), Prog, user_name);
 		exit(E_NAME_IN_USE);
+	    } else {
+		exit(E_SUCCESS);
+	    }
 	}
 
 	/*
@@ -1716,28 +1934,33 @@ main(int argc, char **argv)
 
 	open_files ();
 
+	/* first, seek for a valid uid to use for this user.
+	 * We do this because later we can use the uid we found as
+	 * gid too ... --gafton */
+	if (! uflg)
+	    find_new_uid ();
+	/* do we have to add a group for that user? This is why we need to
+	 * open the group files in the open_files() function  --gafton */
+	if (! (nflg || gflg)) {
+	    find_new_gid();
+	    grp_add();
+	}
+		    
 	usr_update ();
 
 	if (mflg) {
 		create_home ();
 		copy_tree (def_template, user_home, user_id, user_gid);
-	} else if (getdef_str("CREATE_HOME")) {
-		/*
-		 * RedHat added the CREATE_HOME option in login.defs in their
-		 * version of shadow-utils (which makes -m the default, with
-		 * new -M option to turn it off).  Unfortunately, this
-		 * changes the way useradd works (it can be run by scripts
-		 * expecting some standard behaviour), compared to other
-		 * Unices and other Linux distributions, and also adds a lot
-		 * of confusion :-(.
-		 * So we now recognize CREATE_HOME and give a warning here
-		 * (better than "configuration error ... notify administrator"
-		 * errors in every program that reads /etc/login.defs).  -MM
-		 */
-		fprintf(stderr,
-	_("%s: warning: CREATE_HOME not supported, please use -m instead.\n"),
-			Prog);
-	}
+	} /* Stupid warning removed for the innocent's protection */
+	    /*
+	     * The whole idea about breaking some stupid scripts by creating a new
+	     * variable is crap - I could care less about the scripts. Historically
+	     * adduser  type programs have always created the home directories and
+	     * I don't  like the idea of providing a script when we can fix the binary
+	     * itself. And if the scripts are using the right options to the useradd
+	     * then they will not break. If not, they depend on unspecified behavior
+	     * and they will break, but they were broken anyway to beging with --gafton
+	     */
 
 	close_files ();
 

@@ -59,7 +59,9 @@ RCSID(PKG_VER "$Id: userdel.c,v 1.17 2000/09/02 18:40:44 marekm Exp $")
 
 static char *user_name;
 static uid_t user_id;
+static gid_t user_gid;
 static char *user_home;
+static char *user_group;
 
 static char	*Prog;
 static int fflg = 0, rflg = 0;
@@ -276,6 +278,100 @@ update_groups(void)
 	endsgent ();
 #endif	/* NDBM */
 #endif	/* SHADOWGRP */
+}
+
+/* remove_group()
+ * remove the user's group unless it is not really a user-private group
+ */
+static void
+remove_group ()
+{
+	char	*glist_name;
+	struct	group	*gr;
+	struct	passwd	*pwd;
+#ifdef	NDBM
+	struct	group	*ogrp;
+#endif
+
+	if (user_group == NULL || user_name == NULL)
+	    return;
+	
+	if (strcmp(user_name, user_group)) {
+	    return;
+	}
+
+	glist_name = NULL;
+	gr = getgrnam(user_group);
+	if (gr)
+	    glist_name = *(gr->gr_mem);
+	while (glist_name) {
+	    while (glist_name && *glist_name) {
+		if (strncmp(glist_name, user_name, 16)) {
+		    return;
+		}
+		glist_name++;
+	    }
+	}
+
+	setpwent();
+	while ((pwd = getpwent())) {
+	    if (strcmp(pwd->pw_name, user_name) == 0)
+		continue;
+	    
+	    if (pwd->pw_gid == user_gid) {
+		return;
+	    }
+	}
+
+	/* now actually do the removal if we haven't already returned */
+
+	if (! gr_remove (user_group)) {
+	    fprintf (stderr, "%s: error removing group entry\n", Prog);
+	}
+#ifdef	NDBM
+
+	/*
+	 * Update the DBM group file
+	 */
+
+	if (gr_dbm_present()) {
+		if ((ogrp = getgrnam (user_group)) &&
+				! gr_dbm_remove (ogrp)) {
+			fprintf (stderr, "%s: error removing group dbm entry\n",
+				Prog);
+		}
+	}
+	endgrent ();
+#endif	/* NDBM */
+
+#ifdef	SHADOWGRP
+
+	/*
+	 * Delete the shadow group entries as well.
+	 */
+
+	if (is_shadow_grp && ! sgr_remove (user_group)) {
+		fprintf (stderr, "%s: error removing shadow group entry\n",
+			Prog);
+	}
+#ifdef	NDBM
+
+	/*
+	 * Update the DBM shadow group file
+	 */
+
+	if (is_shadow_grp && sg_dbm_present()) {
+		if (! sg_dbm_remove (user_group)) {
+			fprintf (stderr,
+				"%s: error removing shadow group dbm entry\n",
+				Prog);
+		}
+	}
+	endsgent ();
+#endif	/* NDBM */
+#endif	/* SHADOWGRP */
+	SYSLOG((LOG_INFO, "remove group `%s'\n", user_group));
+	return;
 }
 
 /*
@@ -542,7 +638,8 @@ user_busy(const char *name, uid_t uid)
 
 		fprintf(stderr, _("%s: user %s is currently logged in\n"),
 			Prog, name);
-		exit(E_USER_BUSY);
+		if (!fflg)
+			exit(E_USER_BUSY);
 	}
 }
 
@@ -677,6 +774,7 @@ int
 main(int argc, char **argv)
 {
 	struct	passwd	*pwd;
+	struct	group	*gr;
 	int	arg;
 	int	errors = 0;
 
@@ -766,6 +864,9 @@ main(int argc, char **argv)
 #endif
 	user_id = pwd->pw_uid;
 	user_home = xstrdup(pwd->pw_dir);
+	user_gid = pwd->pw_gid;
+	gr = getgrgid(pwd->pw_gid);
+	if (gr) user_group = xstrdup(gr->gr_name);
 
 	/*
 	 * Check to make certain the user isn't logged in.
@@ -822,6 +923,9 @@ main(int argc, char **argv)
 		}
 	}
 #endif
+
+	/* remove user's group if appropriate */
+	remove_group ();
 
 	if (rflg) {
 		if (remove_tree(user_home) || rmdir(user_home)) {
