@@ -1941,6 +1941,19 @@ main(int argc, char **argv)
 	}
 
 	/*
+	 * Don't blindly add a user to a group that already exists...
+	 * If you already have a group username, and want to add the user
+	 * to that group, use useradd -g username username.
+	 * --bero
+	 */
+	if (! (nflg || gflg)) {
+	    if (getgrnam(user_name)) {
+                fprintf(stderr, _("%s: group %s exists - if you want to add this user to that group, use -g.\n"), Prog, user_name);
+		exit(E_NAME_IN_USE);
+	    }
+	}
+
+	/*
 	 * Do the hard stuff - open the files, create the user entries,
 	 * create the home directory, then close and update the files.
 	 */
