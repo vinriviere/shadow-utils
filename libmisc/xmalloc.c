@@ -16,7 +16,9 @@ RCSID("$Id: xmalloc.c,v 1.3 1998/12/28 20:34:56 marekm Exp $")
 
 #include "defines.h"
 
+#if 0
 extern char *malloc();
+#endif
 
 char *
 xmalloc(size_t size)
