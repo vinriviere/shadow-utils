@@ -127,7 +127,7 @@ libmisc_a_OBJECTS =  addgrps.o age.o basename.o chkname.o chkshell.o \
 chowndir.o chowntty.o console.o copydir.o entry.o env.o failure.o \
 fields.o getdate.o hushed.o isexpired.o limits.o list.o log.o \
 login_access.o login_desrpc.o login_krb.o loginprompt.o mail.o motd.o \
-myname.o obscure.o pam_pass.o pwd2spwd.o pwdcheck.o pwd_init.o rlogin.o \
+myname.o nscd.o obscure.o pam_pass.o pwd2spwd.o pwdcheck.o pwd_init.o rlogin.o \
 salt.o setugid.o setup.o setupenv.o shell.o strtoday.o suauth.o sub.o \
 sulog.o ttytype.o tz.o ulimit.o utmp.o valid.o xmalloc.o
 AR = ar
@@ -313,6 +313,7 @@ motd.o: motd.c ../config.h ../lib/rcsid.h ../lib/prototypes.h \
 	../lib/defines.h ../lib/gshadow_.h ../lib/getdef.h
 myname.o: myname.c ../config.h ../lib/rcsid.h ../lib/defines.h \
 	../lib/gshadow_.h ../lib/prototypes.h
+nscd.o: nscd.c
 obscure.o: obscure.c ../config.h ../lib/rcsid.h ../lib/prototypes.h \
 	../lib/defines.h ../lib/gshadow_.h ../lib/getdef.h
 pam_pass.o: pam_pass.c ../config.h
