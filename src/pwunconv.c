@@ -148,6 +148,7 @@ main(int argc, char **argv)
 		 */
 
 #ifdef	ATT_AGE
+#define spwd ((struct spwd *) spwd)
 		if (spwd->sp_max > (63*WEEK/SCALE) && spwd->sp_max < 10000)
 			spwd->sp_max = (63*WEEK/SCALE); /* 10000 is infinity */
 
@@ -165,6 +166,7 @@ main(int argc, char **argv)
 			pwent.pw_age = newage;
 		} else
 			pwent.pw_age = "";
+#undef spwd
 #endif	/* ATT_AGE */
 		if (!pw_update(&pwent)) {
 			fprintf(stderr,

@@ -12,6 +12,7 @@
  */
 static const char *rcsid(const char *);
 #define RCSID(x) \
+  __attribute__((unused)) \
   static const char *rcsid(const char *s) { \
   return rcsid(x); }
 #else  /* ! __STDC__ */

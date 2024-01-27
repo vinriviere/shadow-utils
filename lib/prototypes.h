@@ -129,6 +129,9 @@ extern void motd(void);
 /* myname.c */
 extern struct passwd *get_my_pwent(void);
 
+/* nscd.c */
+extern int hup_nscd(void);
+
 /* obscure.c */
 extern int obscure(const char *, const char *, const struct passwd *);
 

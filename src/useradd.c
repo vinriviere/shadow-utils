@@ -1751,7 +1751,7 @@ new_grent(grent)
 	struct group *grent;
 {
 	bzero ((char *) grent, sizeof *grent);
-	(const char *) (grent->gr_name) = user_name;
+	grent->gr_name = (char *) user_name;
 	grent->gr_passwd = "x";
 	grent->gr_gid = user_gid;
 	grent->gr_mem = &empty_list;
@@ -1770,7 +1770,7 @@ new_sgent(sgent)
 	struct sgrp *sgent;
 {
 	bzero ((char *) sgent, sizeof *sgent);
-	(const char *)(sgent->sg_name) = user_name;
+	sgent->sg_name = (char *) user_name;
 	sgent->sg_passwd = "!";
 	sgent->sg_adm = &empty_list;
 	sgent->sg_mem = &empty_list;
