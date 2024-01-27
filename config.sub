@@ -984,6 +984,9 @@ case $os in
 	-xenix)
 		os=-xenix
 		;;
+	-mintelf)
+		os=-mintelf
+		;;
         -*mint | -*MiNT)
 	        os=-mint
 		;;
