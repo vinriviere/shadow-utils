@@ -617,6 +617,9 @@ EOF
     *:GNU:*:*)
 	echo `echo ${UNAME_MACHINE}|sed -e 's,[-/].*$,,'`-unknown-gnu`echo ${UNAME_RELEASE}|sed -e 's,/.*$,,'`
 	exit 0 ;;
+    x86_64:Linux:*:*)
+	echo x86_64-pc-linux-gnu
+	exit 0 ;;
     *:Linux:*:*)
 	# uname on the ARM produces all sorts of strangeness, and we need to
 	# filter it out.
