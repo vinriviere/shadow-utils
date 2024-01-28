@@ -234,7 +234,7 @@ prompt_password(const char *prompt, int with_echo)
 		else
 			new_modes.c_lflag &= ~(ECHO | ECHOE | ECHOK);
 
-		new_modes.c_lflag |= ECHONL;
+		new_modes.c_lflag |= ECHONL; /* Currently ignored by MiNTLib */
 
 		if (STTY(fileno(ifp), &new_modes))
 			goto out;
@@ -260,6 +260,11 @@ out:
 	if (is_tty) {
 		if (STTY(fileno(ifp), &old_modes))
 			return_value = NULL;
+
+#ifdef __MINT__
+		/* As ECHONL was ignored, manually echo the newline. */
+		putc('\n', ofp);
+#endif
 	}
 
 #ifdef HAVE_SIGACTION
